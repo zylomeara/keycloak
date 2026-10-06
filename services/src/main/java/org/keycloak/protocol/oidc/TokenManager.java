@@ -1322,9 +1322,17 @@ public class TokenManager {
             Object reuseId = oldRefreshToken.getOtherClaims().get(Constants.REUSE_ID);
             boolean offlineTokenRequested = Arrays.asList(scope.split(" ")).contains(OAuth2Constants.OFFLINE_ACCESS) ;
             if (offlineTokenRequested) {
+                ClientSessionContext requestCtx = clientSessionCtx;
                 clientSessionCtx = DefaultClientSessionContext.fromClientSessionAndScopeParameter(clientSession, scope, session);
                 if (oldRefreshToken.getNonce() != null) {
                     clientSessionCtx.setAttribute(OIDCLoginProtocol.NONCE_PARAM, oldRefreshToken.getNonce());
+                }
+                // Token post-processors (e.g. resource indicators) read these request attributes
+                for (String attribute : new String[] { Constants.GRANT_TYPE, OAuth2Constants.RESOURCE }) {
+                    Object value = requestCtx.getAttribute(attribute, Object.class);
+                    if (value != null) {
+                        clientSessionCtx.setAttribute(attribute, value);
+                    }
                 }
             }
             generateRefreshToken(offlineTokenRequested);
